@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Drum Pattern Trainer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{--bg:#12141a;--card:#1b1e27;--line:#2b3040;--txt:#e8eaf0;--mut:#8b93a7;--R:#4da3ff;--L:#ffb347;--K:#ff5d7a;--H:#a78bfa;--ok:#3ddc97;--warn:#ffd166;--bad:#ff5d5d}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:860px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:4px 0 2px}
+.sub{color:var(--mut);margin:0 0 14px;font-size:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.card h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin:0 0 10px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button,select,input,textarea{font:inherit;color:var(--txt);background:#262b38;border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+button{cursor:pointer}
+button:hover{background:#2f3547}
+button.primary{background:#3b6ef5;border-color:#3b6ef5;font-weight:600}
+button.primary:hover{background:#4f7df7}
+button.danger{background:#b3323f;border-color:#b3323f}
+textarea{width:100%;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:18px;letter-spacing:.06em;resize:vertical}
+label{color:var(--mut);font-size:14px}
+.status{font-size:14px;color:var(--mut)}
+.status b{color:var(--txt)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#555;margin-right:6px}
+.dot.on{background:var(--ok)}
+.hitbox{display:flex;align-items:center;gap:12px;margin-top:10px}
+#hitBig{width:64px;height:64px;border-radius:14px;background:#262b38;display:grid;place-items:center;font-size:28px;font-weight:800;transition:background .08s}
+#hitInfo{font-size:14px;color:var(--mut)}
+#tiles{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 4px}
+.tile{width:54px;padding:6px 0 4px;text-align:center;border-radius:10px;border:2px solid var(--line);background:#222735;position:relative}
+.tile.beat{margin-left:10px}
+.tile:first-child{margin-left:0}
+.tile .ch{font-size:24px;font-weight:800;line-height:1}
+.tile .n{font-size:10px;color:var(--mut)}
+.tile .err{font-size:11px;height:14px;color:var(--mut)}
+.tile.R .ch{color:var(--R)}.tile.L .ch{color:var(--L)}.tile.K .ch{color:var(--K)}.tile.H .ch{color:var(--H)}.tile.rest .ch{color:#555}
+.tile.now{border-color:#fff;transform:translateY(-3px)}
+.tile.s-tight{background:#1d4a39;border-color:var(--ok)}
+.tile.s-good{background:#3a4a1d;border-color:#b5e04a}
+.tile.s-off{background:#4d4018;border-color:var(--warn)}
+.tile.s-wrong{background:#5a2020;border-color:var(--bad)}
+.tile.s-miss{background:#2a2a2a;border-color:#666;opacity:.7}
+.tile.want{border-color:#fff;box-shadow:0 0 0 3px #ffffff33}
+.tile.done{background:#1d4a39;border-color:var(--ok)}
+.tile.shake{animation:sh .2s}
+@keyframes sh{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.err-msg{color:var(--bad);font-size:14px;min-height:20px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.stat{background:#222735;border-radius:10px;padding:8px 10px}
+.stat .v{font-size:22px;font-weight:700}
+.stat .k{font-size:12px;color:var(--mut)}
+.tap{display:flex;gap:8px;margin-top:10px}
+.tap button{flex:1;padding:16px;font-size:22px;font-weight:800;touch-action:manipulation}
+.tap .tR{color:var(--R)}.tap .tL{color:var(--L)}.tap .tK{color:var(--K)}
+.map{display:grid;grid-template-columns:auto 1fr auto;gap:8px 10px;align-items:center;font-size:14px}
+details summary{cursor:pointer;color:var(--mut);font-size:13px;letter-spacing:.08em;text-transform:uppercase}
+.legend{font-size:12px;color:var(--mut);margin-top:6px}
+#runInfo{font-size:15px;min-height:22px;margin:4px 0}
+input[type=range]{padding:0;width:150px}
+input[type=number]{width:72px}
+
+body{background:radial-gradient(1100px 600px at 8% -10%,#1f2a52 0%,transparent 60%),radial-gradient(900px 500px at 100% 0%,#3a1d3f 0%,transparent 55%),var(--bg);background-attachment:fixed;min-height:100vh}
+main{max-width:920px;padding:0 16px 48px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 0 8px;flex-wrap:wrap}
+.brand{display:flex;gap:12px;align-items:center}
+.logo{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;font-size:24px;background:linear-gradient(135deg,#3b6ef5,#a855f7);box-shadow:0 6px 20px #3b6ef555}
+.top h1{margin:0;font-size:21px}
+.top .sub{margin:0;font-size:13px}
+.conn{font-size:13px;color:var(--mut);background:#ffffff0d;border:1px solid var(--line);padding:6px 12px;border-radius:999px;max-width:100%}
+.tabs{position:sticky;top:0;z-index:5;display:flex;gap:6px;padding:8px;margin:8px 0 16px;background:#12141ad9;backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:16px}
+.tabs button{flex:1;background:transparent;border:0;color:var(--mut);padding:10px 6px;border-radius:12px;font-weight:600}
+.tabs button.on{background:linear-gradient(135deg,#3b6ef5,#7c4dff);color:#fff;box-shadow:0 4px 14px #3b6ef566}
+.page{display:none}
+.page.active{display:block;animation:fade .18s}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.card{background:linear-gradient(180deg,#202533,#1a1d27);box-shadow:0 8px 24px #0006;border-radius:18px;padding:16px}
+.card h2{color:#aab3ff}
+button.primary{background:linear-gradient(135deg,#3b6ef5,#7c4dff);border:0;box-shadow:0 4px 14px #3b6ef566}
+#hitBig{width:92px;height:92px;border-radius:50%;font-size:34px;border:3px solid var(--line)}
+.tap button{border-radius:16px;background:#222735}
+.tile{width:60px;border-radius:12px}
+.tile.R{box-shadow:inset 0 -3px 0 var(--R)}.tile.L{box-shadow:inset 0 -3px 0 var(--L)}.tile.K{box-shadow:inset 0 -3px 0 var(--K)}.tile.H{box-shadow:inset 0 -3px 0 var(--H)}
+.tile.now{box-shadow:0 0 18px #ffffff66}
+.prev{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.pv{min-width:34px;text-align:center;padding:5px 7px;border-radius:9px;background:#222735;font:800 20px ui-monospace,Menlo,Consolas,monospace}
+.pv.beat{margin-left:10px}
+.pv.R{color:var(--R)}.pv.L{color:var(--L)}.pv.K{color:var(--K)}.pv.H{color:var(--H)}.pv.rest{color:#555}
+.stage-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:8px}
+#curName{font-size:22px;font-weight:700}
+#curMeta{color:var(--mut);font-size:13px}
+.stat .v{background:linear-gradient(135deg,#fff,#aab3ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+</style>
+</head>
+<body>
+<main>
+<header class="top">
+  <div class="brand"><div class="logo">🥁</div><div><h1>Drum Pattern Trainer</h1><p class="sub">Learn patterns on your TD-17</p></div></div>
+  <div class="conn"><span class="dot" id="dot"></span><span id="midiStatus">Not connected</span></div>
+</header>
+<nav class="tabs">
+  <button data-go="connect">Connect</button>
+  <button data-go="patterns">Patterns</button>
+  <button data-go="practice">Practice</button>
+  <button data-go="capture">Capture</button>
+</nav>
+
+<div class="page" data-page="connect">
+  <section class="card">
+    <h2>Connect your kit</h2>
+    <p class="legend" style="margin:0 0 10px">Plug the TD-17 into the computer with USB, turn it on, then connect. Use Chrome or Edge.</p>
+    <div class="row">
+      <button class="primary" id="btnConnect">Connect drums</button>
+      <select id="devSel" style="display:none"></select>
+    </div>
+    <div class="hitbox">
+      <div id="hitBig">–</div>
+      <div id="hitInfo">Hit any pad. You can also test without drums: tap the buttons below, or press F (left), J (right), Space (kick).</div>
+    </div>
+    <div class="tap">
+      <button class="tL" id="tapL">L</button><button class="tR" id="tapR">R</button><button class="tK" id="tapK">K</button>
+    </div>
+  </section>
+  <section class="card">
+    <h2>Pad settings</h2>
+    <p class="legend" style="margin:0 0 10px">A drum module can't tell which hand hit a pad, so by default any pad except the kick counts as a hand hit. If you play R on one pad and L on another, teach it below and R and L will be checked too.</p>
+    <div class="map">
+      <span>Kick</span><span id="mapK"></span><span><button id="learnK">Learn</button></span>
+      <span>Right pad</span><span id="mapR"></span><span><button id="learnR">Learn</button> <button id="clearR">Clear</button></span>
+      <span>Left pad</span><span id="mapL"></span><span><button id="learnL">Learn</button> <button id="clearL">Clear</button></span>
+    </div>
+    <p class="row" style="margin-top:12px"><label><input type="checkbox" id="ign44" checked style="vertical-align:middle"> Ignore the hi-hat pedal chick (note 44)</label></p>
+  </section>
+</div>
+
+<div class="page" data-page="patterns">
+  <section class="card">
+    <h2>Your patterns</h2>
+    <div class="row" style="margin-bottom:8px">
+      <select id="patSel" style="flex:1;min-width:160px"></select>
+      <button id="btnNew">New</button>
+      <button id="btnDel">Delete</button>
+    </div>
+    <div class="row" style="margin-bottom:8px">
+      <input id="patName" placeholder="Pattern name" style="flex:1;min-width:160px">
+      <button id="btnSave">Save</button>
+    </div>
+    <textarea id="patText" rows="2" spellcheck="false" placeholder="R L K R L K L R L K R L K L"></textarea>
+    <div class="err-msg" id="patErr"></div>
+    <div class="prev" id="patPreview"></div>
+    <div class="legend">R right hand · L left hand · K kick · H either hand · dash is a rest. Spaces between letters are optional.</div>
+    <div class="row" style="margin-top:12px"><button class="primary" data-go="practice">Practice this pattern</button></div>
+  </section>
+</div>
+
+<div class="page" data-page="practice">
+  <section class="card">
+    <div class="stage-head"><div id="curName"></div><div id="curMeta"></div></div>
+    <div id="tiles"></div>
+    <div class="legend" id="tileLegend"></div>
+    <div id="runInfo"></div>
+    <div class="row">
+      <button class="primary" id="btnFollow">Practice with click</button>
+      <button id="btnWait">Wait for me</button>
+      <button id="btnHear">Hear it</button>
+      <button id="btnStop" class="danger" style="display:none">Stop</button>
+    </div>
+    <div class="legend">Practice with click scores your timing. Wait for me stays on the next step until you hit it. Hear it plays the pattern so you know how it sounds.</div>
+  </section>
+  <section class="card">
+    <h2>Settings</h2>
+    <div class="row" style="margin-bottom:10px">
+      <label>Tempo</label>
+      <button id="bpmMinus">−</button>
+      <input type="number" id="bpm" value="80" min="30" max="240" step="5">
+      <button id="bpmPlus">+</button>
+      <label style="margin-left:8px">Steps per beat</label>
+      <select id="spb"><option value="1">1 (quarters)</option><option value="2" selected>2 (eighths)</option><option value="3">3 (triplets)</option><option value="4">4 (sixteenths)</option></select>
+    </div>
+    <div class="row">
+      <label>Count-in</label>
+      <select id="countIn"><option value="0">none</option><option value="2">2 beats</option><option value="4" selected>4 beats</option></select>
+      <label><input type="checkbox" id="metOn" checked style="vertical-align:middle"> Metronome</label>
+      <label><input type="checkbox" id="guideOn" style="vertical-align:middle"> Play pattern sound</label>
+      <label>Audio delay fix</label>
+      <input type="range" id="lat" min="0" max="150" step="10" value="0"><span class="status" id="latVal">0 ms</span>
+    </div>
+  </section>
+  <section class="card">
+    <h2>Score</h2>
+    <div class="grid">
+      <div class="stat"><div class="v" id="sLast">–</div><div class="k">Last loop</div></div>
+      <div class="stat"><div class="v" id="sAll">–</div><div class="k">Overall clean hits</div></div>
+      <div class="stat"><div class="v" id="sTime">–</div><div class="k">Timing average</div></div>
+      <div class="stat"><div class="v" id="sStreak">0</div><div class="k">Streak (best <span id="sBest">0</span>)</div></div>
+      <div class="stat"><div class="v" id="sLoops">0</div><div class="k">Loops done</div></div>
+      <div class="stat"><div class="v" id="sMiss">0</div><div class="k">Misses · wrong</div></div>
+    </div>
+    <div class="legend">Green is within about 30 ms, light green within about 70 ms, yellow is the right hit but off time. The number under each step is how many milliseconds early (−) or late (+).</div>
+  </section>
+</div>
+
+<div class="page" data-page="capture">
+  <section class="card">
+    <h2>Record a pattern</h2>
+    <div class="row">
+      <button id="btnRec">Record</button>
+      <button id="btnUseRec" style="display:none">Use as pattern</button>
+    </div>
+    <div id="recOut" style="font-family:ui-monospace,monospace;font-size:20px;margin-top:10px;min-height:28px;word-break:break-all"></div>
+    <div class="legend">Play on the kit and it writes down what you played. Kick shows as K. Hand hits show as H unless you set separate pads for R and L on the Connect page.</div>
+  </section>
+</div>
+</main>
+
+<script>
+// ==LOGIC==
+function parsePattern(text){
+  const raw = String(text).toUpperCase().replace(/[|,;\/]+/g,' ').trim();
+  if(!raw) return [];
+  const out = [];
+  for(const tok of raw.split(/\s+/)){
+    if(/^[RLKH\-\.]+$/.test(tok)){ for(const ch of tok) out.push(ch==='.'?'-':ch); }
+    else out.push('?');
+  }
+  return out;
+}
+
+// maps a MIDI note to R, L, K or H (any hand), given the pad mapping
+function classify(note, map){
+  if(map.kick.has(note)) return 'K';
+  if(map.r===note) return 'R';
+  if(map.l===note) return 'L';
+  return 'H';
+}
+
+function matches(expected, got, map){
+  if(expected==='K') return got==='K';
+  if(got==='K') return false;
+  if(expected==='H') return true;
+  if(map.r!=null && map.l!=null) return got===expected;
+  return true;
+}
+
+function makeGrader(steps, stepMs, t0, map){
+  const N = steps.length;
+  const tight = Math.min(30, stepMs*0.12), good = Math.min(70, stepMs*0.25);
+  const res = [], loops = [];
+  let swept = 0;
+  const st = {tight:0,good:0,off:0,wrong:0,miss:0,extra:0,sumErr:0,nErr:0,streak:0,best:0};
+  function record(abs, r){
+    res[abs] = r;
+    st[r.status]++;
+    if(r.status==='tight'||r.status==='good'){ st.streak++; if(st.streak>st.best) st.best=st.streak; } else st.streak=0;
+    if(r.status==='tight'||r.status==='good'||r.status==='off'){ st.sumErr+=r.err; st.nErr++; }
+  }
+  function finishLoop(k){
+    let total=0, clean=0, sum=0, n=0;
+    for(let i=0;i<N;i++){
+      if(steps[i]==='-') continue;
+      total++;
+      const r = res[k*N+i];
+      if(r && (r.status==='tight'||r.status==='good')) clean++;
+      if(r && r.err!==undefined && r.status!=='wrong'){ sum+=r.err; n++; }
+    }
+    loops.push({acc: total? clean/total : 0, avgErr: n? sum/n : 0});
+  }
+  return {
+    res, loops, st, N,
+    hit(type, t){
+      const abs = Math.round((t - t0)/stepMs);
+      if(abs<0) return {status:'early'};
+      const exp = steps[abs % N];
+      const err = t - (t0 + abs*stepMs);
+      const prev = res[abs];
+      if(exp==='-' || (prev && prev.status!=='miss')){ st.extra++; return {status:'extra', abs, err}; }
+      if(prev && prev.status==='miss'){ st.miss--; }
+      let status;
+      if(!matches(exp, type, map)) status='wrong';
+      else { const a=Math.abs(err); status = a<=tight?'tight': a<=good?'good':'off'; }
+      const r = {status, err, got:type};
+      record(abs, r);
+      return Object.assign({abs}, r);
+    },
+    sweep(now){
+      while(t0 + swept*stepMs + stepMs*0.5 + 25 <= now){
+        const abs = swept;
+        if(steps[abs % N]!=='-' && !res[abs]) record(abs, {status:'miss'});
+        swept++;
+        if(swept % N === 0) finishLoop(swept/N - 1);
+      }
+    }
+  };
+}
+// ==END LOGIC==
+
+// ---------- app ----------
+const $ = s => document.querySelector(s);
+const NOTE_NAMES = {36:'Kick',35:'Kick',38:'Snare',40:'Snare rim',37:'Cross-stick',48:'Tom 1',45:'Tom 2',43:'Tom 3',41:'Tom 4',42:'Hi-hat closed',46:'Hi-hat open',44:'Hi-hat pedal',49:'Crash 1',57:'Crash 2',51:'Ride',59:'Ride edge'};
+const COLORS = {R:'#4da3ff',L:'#ffb347',K:'#ff5d7a',H:'#a78bfa'};
+
+const map = {kick:new Set([35,36]), r:null, l:null};
+let ignore44 = true;
+let library = [];
+let steps = [];
+let run = null;
+let learning = null;
+let recording = false, recTokens = [];
+
+function store(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){} }
+function load(key, def){ try{ const v = localStorage.getItem(key); return v? JSON.parse(v) : def; }catch(e){ return def; } }
+
+const DEFAULTS = [
+  {name:'Sango', text:'R L K R L K L R L K R L K L'},
+  {name:'Single strokes', text:'R L R L R L R L'},
+  {name:'Double strokes', text:'R R L L R R L L'},
+  {name:'Paradiddle', text:'R L R R L R L L'},
+  {name:'Kick and hands', text:'K R L K R L R L'}
+];
+
+// ----- settings persistence -----
+(function(){
+  const m = load('dpt.map', null);
+  if(m){ map.kick = new Set(m.kick||[35,36]); map.r = m.r??null; map.l = m.l??null; ignore44 = m.ign44!==false; }
+  $('#ign44').checked = ignore44;
+  library = load('dpt.lib', null) || DEFAULTS.map(x=>({...x}));
+})();
+function saveMap(){ store('dpt.map', {kick:[...map.kick], r:map.r, l:map.l, ign44:ignore44}); }
+function showMap(){
+  $('#mapK').textContent = 'note ' + [...map.kick].join(', ');
+  $('#mapR').textContent = map.r==null? 'any pad' : 'note ' + map.r;
+  $('#mapL').textContent = map.l==null? 'any pad' : 'note ' + map.l;
+  $('#learnK').textContent = learning==='K'?'Hit a pad…':'Learn';
+  $('#learnR').textContent = learning==='R'?'Hit a pad…':'Learn';
+  $('#learnL').textContent = learning==='L'?'Hit a pad…':'Learn';
+}
+showMap();
+
+// ----- pattern UI -----
+function renderLibrary(selectIdx){
+  const sel = $('#patSel');
+  sel.innerHTML = '';
+  library.forEach((p,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=p.name; sel.appendChild(o); });
+  if(selectIdx!=null) sel.value = selectIdx;
+}
+function loadSelected(){
+  const p = library[+$('#patSel').value];
+  if(!p) return;
+  $('#patName').value = p.name;
+  $('#patText').value = p.text;
+  onPatternChange();
+}
+const tilesEl = $('#tiles');
+let tileEls = [];
+function spbVal(){ return +$('#spb').value; }
+function onPatternChange(){
+  if(run) stopRun();
+  const parsed = parsePattern($('#patText').value);
+  const bad = parsed.includes('?');
+  const onlyRests = parsed.length && parsed.every(s=>s==='-');
+  $('#patErr').textContent = bad? 'Use only R, L, K, H and - in the pattern.' : onlyRests? 'Add at least one hit.' : '';
+  steps = (bad||onlyRests)? [] : parsed;
+  renderTiles();
+}
+function renderTiles(){
+  tilesEl.innerHTML = '';
+  tileEls = [];
+  const spb = spbVal();
+  steps.forEach((s,i)=>{
+    const d = document.createElement('div');
+    d.className = 'tile ' + (s==='-'?'rest':s) + (i%spb===0 && i>0 ? ' beat':'');
+    d.innerHTML = '<div class="ch">'+(s==='-'?'·':s)+'</div><div class="n">'+(i+1)+'</div><div class="err"></div>';
+    tilesEl.appendChild(d);
+    tileEls.push(d);
+  });
+  $('#tileLegend').textContent = steps.length? steps.length + ' steps. Gaps between tiles mark the beats.' : '';
+  $('#patPreview').innerHTML = steps.map((s,i)=>'<span class="pv '+(s==='-'?'rest':s)+(i%spb===0&&i>0?' beat':'')+'">'+(s==='-'?'·':s)+'</span>').join('');
+  $('#curName').textContent = $('#patName').value.trim() || 'Untitled pattern';
+  $('#curMeta').textContent = steps.length? steps.length + ' steps' : 'No pattern yet';
+}
+$('#patText').addEventListener('input', onPatternChange);
+$('#spb').addEventListener('change', ()=>{ if(run) stopRun(); renderTiles(); });
+$('#patSel').addEventListener('change', loadSelected);
+$('#btnNew').onclick = ()=>{ $('#patName').value=''; $('#patText').value=''; $('#patText').focus(); onPatternChange(); };
+$('#btnSave').onclick = ()=>{
+  const name = $('#patName').value.trim() || 'My pattern';
+  const text = $('#patText').value.trim().toUpperCase();
+  if(!text) return;
+  const i = library.findIndex(p=>p.name===name);
+  if(i>=0) library[i].text = text; else library.push({name, text});
+  store('dpt.lib', library);
+  renderLibrary(i>=0? i : library.length-1);
+};
+$('#btnDel').onclick = ()=>{
+  const i = +$('#patSel').value;
+  if(!library[i]) return;
+  library.splice(i,1);
+  if(!library.length) library = DEFAULTS.map(x=>({...x}));
+  store('dpt.lib', library);
+  renderLibrary(0); loadSelected();
+};
+
+// ----- tempo -----
+$('#bpmMinus').onclick = ()=>{ $('#bpm').value = Math.max(30, +$('#bpm').value-5); };
+$('#bpmPlus').onclick = ()=>{ $('#bpm').value = Math.min(240, +$('#bpm').value+5); };
+$('#lat').addEventListener('input', ()=>{ $('#latVal').textContent = $('#lat').value + ' ms'; });
+
+// ----- audio -----
+let ctx = null, noiseBuf = null;
+function ensureAudio(){
+  if(!ctx){
+    ctx = new (window.AudioContext||window.webkitAudioContext)();
+    noiseBuf = ctx.createBuffer(1, ctx.sampleRate*0.2, ctx.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for(let i=0;i<d.length;i++) d[i] = Math.random()*2-1;
+  }
+  if(ctx.state==='suspended') ctx.resume();
+}
+function at(ms){ return Math.max(ctx.currentTime, ctx.currentTime + (ms - performance.now())/1000); }
+function click(ms, accent){
+  const t = at(ms), o = ctx.createOscillator(), g = ctx.createGain();
+  o.frequency.value = accent? 1800 : 1200;
+  g.gain.setValueAtTime(accent?0.5:0.3, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t+0.05);
+  o.connect(g).connect(ctx.destination); o.start(t); o.stop(t+0.06);
+}
+function drumSound(type, ms){
+  const t = at(ms);
+  if(type==='K'){
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(45, t+0.12);
+    g.gain.setValueAtTime(0.9, t); g.gain.exponentialRampToValueAtTime(0.001, t+0.25);
+    o.connect(g).connect(ctx.destination); o.start(t); o.stop(t+0.26);
+    return;
+  }
+  const n = ctx.createBufferSource(); n.buffer = noiseBuf;
+  const f = ctx.createBiquadFilter(); f.type='bandpass'; f.frequency.value = type==='L'? 1500 : 2200;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.5, t); g.gain.exponentialRampToValueAtTime(0.001, t+0.14);
+  n.connect(f).connect(g).connect(ctx.destination); n.start(t); n.stop(t+0.15);
+  const o = ctx.createOscillator(), g2 = ctx.createGain();
+  o.type='triangle'; o.frequency.value = type==='L'? 170 : 210;
+  g2.gain.setValueAtTime(0.4, t); g2.gain.exponentialRampToValueAtTime(0.001, t+0.1);
+  o.connect(g2).connect(ctx.destination); o.start(t); o.stop(t+0.11);
+}
+
+// ----- run control -----
+function setButtons(running){
+  $('#btnStop').style.display = running? '' : 'none';
+  $('#btnFollow').style.display = $('#btnWait').style.display = $('#btnHear').style.display = running? 'none' : '';
+}
+function stopRun(){
+  if(!run) return;
+  clearInterval(run.timer); cancelAnimationFrame(run.raf);
+  run = null;
+  setButtons(false);
+  tileEls.forEach(el=>{ el.classList.remove('now','want','done'); });
+  $('#runInfo').textContent = '';
+}
+$('#btnStop').onclick = stopRun;
+
+function startRun(mode){
+  if(!steps.length){ $('#patErr').textContent = $('#patErr').textContent || 'Enter a pattern first.'; return; }
+  if(recording) toggleRecord();
+  ensureAudio();
+  const bpm = Math.min(240, Math.max(30, +$('#bpm').value || 80));
+  const spb = spbVal();
+  const stepMs = 60000/(bpm*spb);
+  const cb = mode==='wait'? 0 : +$('#countIn').value;
+  const start = performance.now() + 300;
+  run = {mode, spb, stepMs, N:steps.length, cb, start, t0: start + cb*spb*stepMs, nextA: -cb*spb, waitIdx:0, waitLoop:0, waitMistakes:0, waitLoopMistakes:0, cleanLoops:0, waitDone:[]};
+  if(mode==='follow') run.grader = makeGrader(steps, stepMs, run.t0, map);
+  tileEls.forEach(el=>{ el.className = el.className.replace(/\bs-\w+|\bnow|\bwant|\bdone/g,'').trim(); el.querySelector('.err').textContent=''; });
+  setButtons(true);
+  resetStats();
+  if(mode!=='wait'){ run.timer = setInterval(schedule, 25); schedule(); }
+  run.raf = requestAnimationFrame(frame);
+}
+$('#btnFollow').onclick = ()=>startRun('follow');
+$('#btnWait').onclick = ()=>startRun('wait');
+$('#btnHear').onclick = ()=>startRun('hear');
+
+function schedule(){
+  if(!run) return;
+  const horizon = performance.now() + 150;
+  const metOn = $('#metOn').checked, guide = $('#guideOn').checked || run.mode==='hear';
+  while(true){
+    const a = run.nextA, tm = run.t0 + a*run.stepMs;
+    if(tm > horizon) break;
+    if(a<0){ if(metOn && ((a % run.spb)+run.spb)%run.spb===0) click(tm,false); }
+    else {
+      if(metOn && a%run.spb===0) click(tm, a%run.N===0);
+      const s = steps[a%run.N];
+      if(guide && s!=='-') drumSound(s, tm);
+    }
+    run.nextA++;
+  }
+}
+
+function frame(){
+  if(!run) return;
+  const now = performance.now();
+  if(run.mode==='wait') paintWait();
+  else paintFollow(now);
+  run.raf = requestAnimationFrame(frame);
+}
+
+function paintFollow(now){
+  const g = run.grader;
+  g.sweep(now - Number($('#lat').value));
+  const rel = (now - run.t0)/run.stepMs;
+  const info = $('#runInfo');
+  if(now < run.t0 - run.stepMs*0.5){
+    const beat = Math.floor((now - run.start)/(run.stepMs*run.spb)) + 1;
+    info.textContent = run.cb? 'Count-in ' + Math.max(1, Math.min(run.cb, beat)) : 'Get ready…';
+  } else info.textContent = run.mode==='hear'? 'Listening…' : 'Play along';
+  const curAbs = Math.floor(rel + 0.5);
+  const nowIdx = curAbs>=0? curAbs % run.N : -1;
+  const base = curAbs>=0? Math.floor(curAbs/run.N)*run.N : 0;
+  tileEls.forEach((el,i)=>{
+    const base_cls = el.className.replace(/\bs-\w+|\bnow/g,'').replace(/\s+/g,' ').trim();
+    const r = run.mode==='follow'? g.res[base+i] : null;
+    let cls = base_cls;
+    if(i===nowIdx) cls += ' now';
+    if(r) cls += ' s-' + r.status;
+    if(el.className!==cls) el.className = cls;
+    const e = el.querySelector('.err');
+    const txt = r? (r.status==='miss'?'miss' : r.status==='wrong'?'✗' : (r.err>0?'+':'')+Math.round(r.err)) : '';
+    if(e.textContent!==txt) e.textContent = txt;
+  });
+  if(run.mode==='follow') showStats(g);
+}
+
+function paintWait(){
+  const info = $('#runInfo');
+  info.textContent = 'Step ' + (run.waitIdx+1) + ' of ' + run.N + ' · loop ' + (run.waitLoop+1);
+  tileEls.forEach((el,i)=>{
+    let cls = el.className.replace(/\bwant|\bdone/g,'').replace(/\s+/g,' ').trim();
+    if(steps[i]!=='-'){
+      if(i===run.waitIdx) cls += ' want';
+      else if(run.waitDone[i]) cls += ' done';
+    }
+    if(el.className!==cls) el.className = cls;
+  });
+}
+function nextWaitIdx(i){ let k=(i+1)%run.N; while(steps[k]==='-') k=(k+1)%run.N; return k; }
+function waitHit(type){
+  if(steps[run.waitIdx]==='-') run.waitIdx = nextWaitIdx(run.waitIdx);
+  const exp = steps[run.waitIdx];
+  if(matches(exp, type, map)){
+    run.waitDone[run.waitIdx] = true;
+    const prev = run.waitIdx;
+    run.waitIdx = nextWaitIdx(prev);
+    if(run.waitIdx <= prev){
+      run.waitLoop++;
+      if(run.waitLoopMistakes===0) run.cleanLoops++;
+      run.waitLoopMistakes = 0;
+      run.waitDone = [];
+      $('#sLoops').textContent = run.waitLoop;
+      $('#sLast').textContent = run.cleanLoops + ' clean';
+    }
+  } else {
+    run.waitMistakes++; run.waitLoopMistakes++;
+    const el = tileEls[run.waitIdx]; el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake');
+    $('#sMiss').textContent = '0 · ' + run.waitMistakes;
+  }
+}
+
+// ----- stats -----
+function resetStats(){
+  ['#sLast','#sAll','#sTime'].forEach(s=>$(s).textContent='–');
+  $('#sStreak').textContent='0'; $('#sBest').textContent='0'; $('#sLoops').textContent='0'; $('#sMiss').textContent='0 · 0';
+}
+function showStats(g){
+  const s = g.st, judged = s.tight+s.good+s.off+s.wrong+s.miss;
+  if(g.loops.length){ const l = g.loops[g.loops.length-1]; $('#sLast').textContent = Math.round(l.acc*100)+'%'; }
+  $('#sAll').textContent = judged? Math.round((s.tight+s.good)/judged*100)+'%' : '–';
+  if(s.nErr){
+    const avg = Math.round(s.sumErr/s.nErr);
+    $('#sTime').textContent = (avg>0?'+':'') + avg + ' ms';
+  }
+  $('#sStreak').textContent = s.streak; $('#sBest').textContent = s.best;
+  $('#sLoops').textContent = g.loops.length;
+  $('#sMiss').textContent = s.miss + ' · ' + s.wrong;
+}
+
+// ----- hits -----
+function onHit(note, vel, ts, forcedType){
+  if(forcedType==null && ignore44 && note===44) return;
+  if(learning && forcedType==null){
+    if(learning==='K') map.kick = new Set([note]);
+    if(learning==='R') map.r = note;
+    if(learning==='L') map.l = note;
+    learning = null; saveMap(); showMap();
+    flash('Saved', '#3ddc97', 'Pad saved as note ' + note);
+    return;
+  }
+  const type = forcedType || classify(note, map);
+  flash(type, COLORS[type], (NOTE_NAMES[note]? NOTE_NAMES[note]+' · ' : '') + (note>=0? 'note '+note+' · ':'') + 'velocity ' + vel);
+  if(recording){ recTokens.push(type); $('#recOut').textContent = recTokens.join(' '); return; }
+  if(!run) return;
+  if(run.mode==='follow'){
+    const r = run.grader.hit(type, ts - Number($('#lat').value));
+    return r;
+  }
+  if(run.mode==='wait') waitHit(type);
+}
+let flashTimer;
+function flash(label, color, info){
+  const b = $('#hitBig');
+  b.textContent = label; b.style.background = color; b.style.color = '#111';
+  $('#hitInfo').textContent = info;
+  clearTimeout(flashTimer);
+  flashTimer = setTimeout(()=>{ b.style.background = ''; b.style.color=''; }, 120);
+}
+
+// on-screen buttons and keyboard (for testing without the kit)
+function tapBind(id, type){
+  $(id).addEventListener('pointerdown', e=>{ e.preventDefault(); ensureAudio(); onHit(-1, 100, performance.now(), type); });
+}
+tapBind('#tapL','L'); tapBind('#tapR','R'); tapBind('#tapK','K');
+document.addEventListener('keydown', e=>{
+  if(e.repeat) return;
+  const tag = (e.target.tagName||'').toLowerCase();
+  if(tag==='input'||tag==='textarea'||tag==='select') return;
+  const k = e.key.toLowerCase();
+  const t = k==='f'?'L' : k==='j'?'R' : k===' '?'K' : null;
+  if(t){ e.preventDefault(); onHit(-1, 100, performance.now(), t); }
+});
+
+// ----- pad settings -----
+$('#learnK').onclick = ()=>{ learning = learning==='K'?null:'K'; showMap(); };
+$('#learnR').onclick = ()=>{ learning = learning==='R'?null:'R'; showMap(); };
+$('#learnL').onclick = ()=>{ learning = learning==='L'?null:'L'; showMap(); };
+$('#clearR').onclick = ()=>{ map.r = null; saveMap(); showMap(); };
+$('#clearL').onclick = ()=>{ map.l = null; saveMap(); showMap(); };
+$('#ign44').onchange = e=>{ ignore44 = e.target.checked; saveMap(); };
+
+// ----- record -----
+function toggleRecord(){
+  if(!recording){
+    if(run) stopRun();
+    recording = true; recTokens = [];
+    $('#recOut').textContent = 'Recording… play something.';
+    $('#btnRec').textContent = 'Stop recording';
+    $('#btnRec').classList.add('danger');
+    $('#btnUseRec').style.display = 'none';
+  } else {
+    recording = false;
+    $('#btnRec').textContent = 'Record';
+    $('#btnRec').classList.remove('danger');
+    if(recTokens.length){ $('#recOut').textContent = recTokens.join(' '); $('#btnUseRec').style.display = ''; }
+    else $('#recOut').textContent = 'Nothing recorded.';
+  }
+}
+$('#btnRec').onclick = toggleRecord;
+$('#btnUseRec').onclick = ()=>{
+  $('#patName').value = 'Recorded pattern';
+  $('#patText').value = recTokens.join(' ');
+  onPatternChange();
+  showPage('patterns');
+};
+
+// ----- MIDI -----
+let midiAccess = null;
+function setStatus(text, on){ $('#midiStatus').textContent = text; $('#dot').className = 'dot' + (on?' on':''); }
+function attachInputs(){
+  if(!midiAccess) return;
+  const inputs = [...midiAccess.inputs.values()];
+  const sel = $('#devSel');
+  const prev = sel.value;
+  sel.innerHTML = '';
+  const all = document.createElement('option'); all.value='all'; all.textContent='All devices'; sel.appendChild(all);
+  inputs.forEach(inp=>{ const o=document.createElement('option'); o.value=inp.id; o.textContent=inp.name; sel.appendChild(o); });
+  const td = inputs.find(i=>/TD-?17/i.test(i.name||''));
+  sel.value = prev && [...sel.options].some(o=>o.value===prev)? prev : (td? td.id : 'all');
+  sel.style.display = inputs.length>1? '' : 'none';
+  inputs.forEach(inp=>{ inp.onmidimessage = onMidi; });
+  if(!inputs.length) setStatus('No MIDI device found. Plug in the TD-17 with USB, turn it on, then click Connect again.', false);
+  else setStatus('Connected: ' + (td? td.name : inputs.map(i=>i.name).join(', ')), true);
+}
+function onMidi(e){
+  const d = e.data;
+  if(!d || d.length<3) return;
+  const sel = $('#devSel').value;
+  if(sel!=='all' && e.target.id!==sel) return;
+  if((d[0] & 0xF0)===0x90 && d[2]>0) onHit(d[1], d[2], e.timeStamp);
+}
+$('#devSel').onchange = ()=>{};
+$('#btnConnect').onclick = async ()=>{
+  if(!navigator.requestMIDIAccess){ setStatus('This browser has no Web MIDI. Open this file in Chrome or Edge on a computer.', false); return; }
+  try{
+    midiAccess = await navigator.requestMIDIAccess();
+    midiAccess.onstatechange = attachInputs;
+    attachInputs();
+    ensureAudio();
+  }catch(err){
+    setStatus('MIDI access was blocked. Allow it when the browser asks, or check the lock icon in the address bar.', false);
+  }
+};
+
+// ----- pages -----
+function showPage(name){
+  if(name!=='practice' && run) stopRun();
+  if(name!=='capture' && recording) toggleRecord();
+  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active', p.dataset.page===name));
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on', b.dataset.go===name));
+  window.scrollTo({top:0});
+}
+document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click', ()=>showPage(b.dataset.go)));
+$('#patName').addEventListener('input', ()=>{ $('#curName').textContent = $('#patName').value.trim() || 'Untitled pattern'; });
+
+// ----- init -----
+renderLibrary(0);
+loadSelected();
+showPage('connect');
+</script>
+</body>
+</html>
