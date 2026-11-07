@@ -89,6 +89,10 @@ button.primary{background:linear-gradient(135deg,#3b6ef5,#7c4dff);border:0;box-s
 .pv.beat{margin-left:10px}
 .pv.R{color:var(--R)}.pv.L{color:var(--L)}.pv.K{color:var(--K)}.pv.H{color:var(--H)}.pv.rest{color:#555}
 .livemsg{margin:8px 0;padding:10px 12px;border-radius:12px;border:2px solid var(--line);background:#ffffff0a;font-weight:600;min-height:44px}
+.tile{cursor:pointer}
+.tile.off{opacity:.28;border-style:dashed}
+.tile.want{animation:pulse 1s infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 6px #ffffff22}}
 .stage-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:8px}
 #curName{font-size:22px;font-weight:700}
 #curMeta{color:var(--mut);font-size:13px}
@@ -162,15 +166,22 @@ button.primary{background:linear-gradient(135deg,#3b6ef5,#7c4dff);border:0;box-s
     <div class="stage-head"><div id="curName"></div><div id="curMeta"></div></div>
     <div id="tiles"></div>
     <div class="legend" id="tileLegend"></div>
+    <div class="row" style="margin:10px 0 4px">
+      <label>Practice steps</label>
+      <select id="secFrom"></select><label>to</label><select id="secTo"></select>
+      <button id="maskReset">All steps</button>
+    </div>
+    <div class="legend" id="maskInfo">Tap a step to switch it off and practice around it. Tap it again to bring it back.</div>
     <div id="runInfo"></div>
     <div id="liveMsg" class="livemsg">Your last hit shows here.</div>
+    <div class="legend" id="paceInfo"></div>
     <div class="row">
-      <button class="primary" id="btnFollow">Practice with click</button>
-      <button id="btnWait">Wait for me</button>
+      <button id="btnFollow">Practice with click</button>
+      <button class="primary" id="btnWait">Learn mode</button>
       <button id="btnHear">Hear it</button>
       <button id="btnStop" class="danger" style="display:none">Stop</button>
     </div>
-    <div class="legend">Practice with click scores your timing. Wait for me stays on the next step until you hit it. Hear it plays the pattern so you know how it sounds.</div>
+    <div class="legend">Learn mode goes at your speed: the lit step waits until you hit it right, then moves to the next, and after the last step it starts over. Practice with click scores your timing against the beat. Hear it plays the pattern so you know how it sounds.</div>
   </section>
   <section class="card">
     <h2>Settings</h2>
@@ -368,6 +379,7 @@ function loadSelected(){
 const tilesEl = $('#tiles');
 let tileEls = [];
 function spbVal(){ return +$('#spb').value; }
+let muted = [];
 function onPatternChange(){
   if(run) stopRun();
   const parsed = parsePattern($('#patText').value);
@@ -375,9 +387,10 @@ function onPatternChange(){
   const onlyRests = parsed.length && parsed.every(s=>s==='-');
   $('#patErr').textContent = bad? 'Use only R, L, K, H and - in the pattern.' : onlyRests? 'Add at least one hit.' : '';
   steps = (bad||onlyRests)? [] : parsed;
-  renderTiles();
+  renderTiles(true);
 }
-function renderTiles(){
+function renderTiles(reset){
+  if(reset) muted = [];
   tilesEl.innerHTML = '';
   tileEls = [];
   const spb = spbVal();
@@ -392,7 +405,44 @@ function renderTiles(){
   $('#patPreview').innerHTML = steps.map((s,i)=>'<span class="pv '+(s==='-'?'rest':s)+(i%spb===0&&i>0?' beat':'')+'">'+(s==='-'?'·':s)+'</span>').join('');
   $('#curName').textContent = $('#patName').value.trim() || 'Untitled pattern';
   $('#curMeta').textContent = steps.length? steps.length + ' steps' : 'No pattern yet';
+  const n = steps.length, pf = +$('#secFrom').value || 1, pt = +$('#secTo').value || n;
+  [$('#secFrom'), $('#secTo')].forEach(sel=>{
+    sel.innerHTML = '';
+    for(let i=1;i<=n;i++){ const o=document.createElement('option'); o.value=i; o.textContent=i; sel.appendChild(o); }
+  });
+  $('#secFrom').value = reset? 1 : Math.min(pf, n);
+  $('#secTo').value = reset? n : (pt<=n && pt>=pf? pt : n);
+  applyMask();
 }
+function buildEff(){
+  const a = (+$('#secFrom').value||1) - 1, b = (+$('#secTo').value||steps.length) - 1;
+  return steps.map((s,i)=> (muted[i] || i<a || i>b)? '-' : s);
+}
+function activeCount(eff){ return eff.filter(s=>s!=='-').length; }
+function applyMask(){
+  const eff = buildEff();
+  tileEls.forEach((el,i)=>el.classList.toggle('off', steps[i]!=='-' && eff[i]==='-'));
+  if(run && run.eff) eff.forEach((s,i)=>{ run.eff[i] = s; });
+  const total = activeCount(steps), on = activeCount(eff);
+  $('#maskInfo').textContent = on===total? 'Tap a step to switch it off and practice around it. Tap it again to bring it back.' : on + ' of ' + total + ' notes on. Tap a dimmed step to bring it back.';
+}
+tilesEl.addEventListener('click', e=>{
+  const el = e.target.closest('.tile'); if(!el) return;
+  const i = tileEls.indexOf(el);
+  if(i<0 || steps[i]==='-') return;
+  muted[i] = !muted[i];
+  if(activeCount(buildEff())===0){ muted[i] = false; $('#maskInfo').textContent = 'Keep at least one note on.'; return; }
+  applyMask();
+});
+function secChanged(which){
+  const f = $('#secFrom'), t = $('#secTo');
+  if(+f.value > +t.value){ if(which==='from') t.value = f.value; else f.value = t.value; }
+  if(activeCount(buildEff())===0){ muted = []; }
+  applyMask();
+}
+$('#secFrom').onchange = ()=>secChanged('from');
+$('#secTo').onchange = ()=>secChanged('to');
+$('#maskReset').onclick = ()=>{ muted = []; $('#secFrom').value = 1; $('#secTo').value = steps.length; applyMask(); };
 $('#patText').addEventListener('input', onPatternChange);
 $('#spb').addEventListener('change', ()=>{ if(run) stopRun(); renderTiles(); });
 $('#patSel').addEventListener('change', loadSelected);
@@ -476,6 +526,7 @@ $('#btnStop').onclick = stopRun;
 
 function startRun(mode){
   if(!steps.length){ $('#patErr').textContent = $('#patErr').textContent || 'Enter a pattern first.'; return; }
+  if(activeCount(buildEff())===0){ $('#maskInfo').textContent = 'Switch at least one note on first.'; return; }
   if(recording) toggleRecord();
   ensureAudio();
   const bpm = Math.min(240, Math.max(30, +$('#bpm').value || 80));
@@ -483,12 +534,14 @@ function startRun(mode){
   const stepMs = 60000/(bpm*spb);
   const cb = mode==='wait'? 0 : +$('#countIn').value;
   const start = performance.now() + 300;
-  run = {mode, spb, stepMs, N:steps.length, cb, start, t0: start + cb*spb*stepMs, nextA: -cb*spb, waitIdx:0, waitLoop:0, waitMistakes:0, waitLoopMistakes:0, cleanLoops:0, waitDone:[]};
-  if(mode==='follow') run.grader = makeGrader(steps, stepMs, run.t0, map);
+  run = {mode, spb, stepMs, N:steps.length, cb, start, t0: start + cb*spb*stepMs, nextA: -cb*spb, waitIdx:0, waitLoop:0, waitMistakes:0, waitLoopMistakes:0, cleanLoops:0, waitDone:[], loopFirst:null, loopLast:null, bestPace:0, cleanRow:0, bestRow:0};
+  run.eff = buildEff();
+  run.waitIdx = Math.max(0, run.eff.findIndex(s=>s!=='-'));
+  if(mode==='follow') run.grader = makeGrader(run.eff, stepMs, run.t0, map);
   tileEls.forEach(el=>{ el.className = el.className.replace(/\bs-\w+|\bnow|\bwant|\bdone/g,'').trim(); el.querySelector('.err').textContent=''; });
   setButtons(true);
   resetStats();
-  $('#liveMsg').textContent = 'Play along. Wrong hits show here.'; $('#liveMsg').style.borderColor=''; $('#liveMsg').style.background='';
+  $('#liveMsg').textContent = mode==='wait'? 'Hit the lit step. Get it right and it moves on. After the last step it starts over.' : 'Play along. Wrong hits show here.'; $('#paceInfo').textContent = ''; $('#liveMsg').style.borderColor=''; $('#liveMsg').style.background='';
   if(mode!=='wait'){ run.timer = setInterval(schedule, 25); schedule(); }
   run.raf = requestAnimationFrame(frame);
 }
@@ -506,7 +559,7 @@ function schedule(){
     if(a<0){ if(metOn && ((a % run.spb)+run.spb)%run.spb===0) click(tm,false); }
     else {
       if(metOn && a%run.spb===0) click(tm, a%run.N===0);
-      const s = steps[a%run.N];
+      const s = run.eff[a%run.N];
       if(guide && s!=='-') drumSound(s, tm);
     }
     run.nextA++;
@@ -549,31 +602,47 @@ function paintFollow(now){
 
 function paintWait(){
   const info = $('#runInfo');
+  if(run.eff[run.waitIdx]==='-') run.waitIdx = nextWaitIdx(run.waitIdx);
   info.textContent = 'Step ' + (run.waitIdx+1) + ' of ' + run.N + ' · loop ' + (run.waitLoop+1);
   tileEls.forEach((el,i)=>{
     let cls = el.className.replace(/\bwant|\bdone/g,'').replace(/\s+/g,' ').trim();
-    if(steps[i]!=='-'){
+    if(run.eff[i]!=='-'){
       if(i===run.waitIdx) cls += ' want';
       else if(run.waitDone[i]) cls += ' done';
     }
     if(el.className!==cls) el.className = cls;
   });
 }
-function nextWaitIdx(i){ let k=(i+1)%run.N; while(steps[k]==='-') k=(k+1)%run.N; return k; }
-function waitHit(type, note){
-  if(steps[run.waitIdx]==='-') run.waitIdx = nextWaitIdx(run.waitIdx);
-  const exp = steps[run.waitIdx];
+function nextWaitIdx(i){ let k=(i+1)%run.N; while(run.eff[k]==='-') k=(k+1)%run.N; return k; }
+function waitHit(type, note, ts){
+  if(run.eff[run.waitIdx]==='-') run.waitIdx = nextWaitIdx(run.waitIdx);
+  const exp = run.eff[run.waitIdx];
   if(matches(exp, type, map)){
     run.waitDone[run.waitIdx] = true;
+    if(!run.loopFirst) run.loopFirst = {t:ts, idx:run.waitIdx};
+    run.loopLast = {t:ts, idx:run.waitIdx};
     const prev = run.waitIdx;
     run.waitIdx = nextWaitIdx(prev);
     if(run.waitIdx <= prev){
       run.waitLoop++;
-      if(run.waitLoopMistakes===0) run.cleanLoops++;
+      const clean = run.waitLoopMistakes===0;
+      let msg = 'Loop ' + run.waitLoop + ' done · ' + (clean? 'clean' : run.waitLoopMistakes + ' mistake' + (run.waitLoopMistakes>1?'s':''));
+      const span = run.loopLast.idx - run.loopFirst.idx;
+      if(clean && span>0){
+        const sm = (run.loopLast.t - run.loopFirst.t)/span;
+        const bpm = Math.round(60000/(sm*run.spb)/5)*5;
+        msg += ' · about ' + bpm + ' BPM';
+        if(bpm>run.bestPace) run.bestPace = bpm;
+        $('#paceInfo').textContent = 'Your pace is about ' + bpm + ' BPM. Best clean pace this session: about ' + run.bestPace + ' BPM. When it feels easy, speed up on your own.';
+      }
+      if(clean){ run.cleanLoops++; run.cleanRow++; if(run.cleanRow>run.bestRow) run.bestRow = run.cleanRow; } else run.cleanRow = 0;
+      flash('✓', '#3ddc97', msg, 700);
       run.waitLoopMistakes = 0;
       run.waitDone = [];
+      run.loopFirst = null; run.loopLast = null;
       $('#sLoops').textContent = run.waitLoop;
       $('#sLast').textContent = run.cleanLoops + ' clean';
+      $('#sStreak').textContent = run.cleanRow; $('#sBest').textContent = run.bestRow;
     }
   } else {
     run.waitMistakes++; run.waitLoopMistakes++;
@@ -620,7 +689,7 @@ function onHit(note, vel, ts, forcedType){
     if(r && r.status==='wrong') wrongHit(r.exp, type, note);
     return r;
   }
-  if(run.mode==='wait') waitHit(type, note);
+  if(run.mode==='wait') waitHit(type, note, ts);
 }
 let flashTimer;
 function flash(label, color, info, ms){
